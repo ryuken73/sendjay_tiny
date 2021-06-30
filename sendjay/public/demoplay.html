@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sendjay Demo</title>
+    <link id="favicon" href="/img/sendjay_darkblue.png" rel="shortcut icon" type="image/x-icon"/>
+    <script src="/plugin/jquery-3.4.1.min.js"></script>
+</head>
+<body>
+    <video id="videoTab" height=100% width=100% controls></video>
+    <script>        
+        $.when($.ready).done(async function() {
+            try {
+                await $.getScript("/common/jay_common.js")
+                const param = hush.http.getParamsFromLocation()
+                hush.http.removeCache(param.nocache) 
+                $("#videoTab").attr("src", param.path)
+                $("#videoTab").attr("autoplay", true)
+            } catch (ex) {
+                hush.msg.alert(ex.message)
+            }
+        }).fail(function(ex) {
+            hush.msg.alert("Error occurred when loading page. " + ex.message)
+        })        
+    </script>
+</body>
+</html>

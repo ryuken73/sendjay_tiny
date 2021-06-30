@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sendjay</title>
+    <link id="favicon" href="/img/sendjay_darkblue.png" rel="shortcut icon" type="image/x-icon"/>
+    <link rel="stylesheet" href="/plugin/jquery-ui-smoothness-1.12.1.min.css">
+    <link rel="stylesheet" href="/common/jay_common.css?001">
+    <script src="/plugin/jquery-3.4.1.min.js"></script>
+    <script src="/plugin/jquery-ui-smoothness-1.12.1.min.js"></script>
+    <script src="/plugin/jquery.cookie.js"></script>
+    <script src="/plugin/moment.min.js"></script>
+    <script src="/plugin/moment-timezone-with-data-1970-2030.min.js"></script>
+    <script src="/plugin/socket.io.min.js"></script>
+    <style>
+        .mem { display:flex;flex-direction:column;background-color:#fdf5f6;border:1px solid lightgray;overflow:auto;padding-top:4px;margin:4px 4px 0px 4px }
+        .memNm { height:20px;color:#005192;cursor:pointer;margin-left:3px }
+        .memTeam { height:20px;font-size:12px;cursor:pointer;margin-left:3px }
+        .memSel { background:#b2e2f8 }
+        .picBtn { height:30px;display:flex;align-items:center;background:#0082AD;color:white;border-radius:5px;padding:0px 5px }
+    </style>
+</head>
+<body>
+    <div id=main_pg style="max-width:1240px;width:100%;height:100%;display:flex;flex-direction:column;background-color:#eaeaea;margin:0 auto">
+        <div id=fr_header_bar style="height:50px;display:flex;justify-content:space-between;margin:0px 5px">
+            <div style="width:80%;display:flex;align-items:center">
+                <img src="/img/sendjay_darkblue.png" style="width:40px;height:40px;margin-left:10px"/> 
+                <div id=header_title class=coDotDot style="font-size:16px;font-weight:bold;color:#005192;margin-left:10px">sendjay</div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:flex-end">
+                <img id=img_disconn src="/img/disconnected.png" class=coImg24 style="display:none;margin-top:5px" />
+                <img id=btn_refresh src="/img/refresh.png" class=coImg24 style="display:none;margin-left:8px" />
+                <img id=btn_logout src="/img/logout.png" class=coImg24 style="display:none;margin-left:8px" />
+            </div>
+        </div>
+        <div id=fr_header_tab style="height:40px;display:flex;justify-content:center;margin:0px 5px">
+            <div id=btn_people class=coNav>People</div>
+            <div id=btn_chat class=coNav>
+                <span>Chat</span>
+                <span id=spn_unread style="display:none;font-size:12px;font-weight:normal;background-color:orange;color:white;border:1px solid yellow;border-radius:2px;padding:0px 1px;margin-left:5px">new</span>
+            </div>
+            <div id=btn_setting class=coNav style="border:1px">Settings</div>
+        </div>
+        <div id=fr_menu_top style="height:50px;display:none;align-items:center;margin:0px 5px">
+            <input type=checkbox id=chk_selectall name=chk_selectall style="margin-left:10px" />
+            <input id=in_search type=search placeholder="name.." spellcheck=false onsearch="OnSearch(this)" style="width:150px;height:24px;margin-left:8px" />
+            <div id=btn_search class=coImgBtn><img src="/img/white_search.png" class=coImg24 /></div>
+            <div id=btn_team class="coMenuBtn people"><img src="/img/white_team.png" class=coImgMenu /><span>Team</span></div>            
+            <div id=btn_company class="coMenuBtn people"><img src="/img/white_company.png" class=coImgMenu /><span>Tree</span></div>
+            <div id=btn_collapseall style="margin-left:10px"><img src="/img/minus.png" class=coImg32 /></div>
+            <div id=btn_expandall style="margin-left:10px"><img src="/img/plus.png" class=coImg32 /></div>
+        </div>
+        <div id=fr_people style="flex:1;display:none;overflow-y:auto;margin:0px 5px"> <!--height:calc(100% - 140px), overflow:auto needed-->
+            <div id=list_people style="flex-grow:1;background-color:white;border:1px solid darkgray;overflow-y:auto"></div>
+            <div id=selected_people style="display:none;flex-direction:column;min-width:100px;max-width:100px;overflow:hidden;background-color:white;border:1px solid darkgray;border-left:0px;margin-left:auto">
+                <div style="height:25px;border-bottom:1px solid darkgray">
+                    <div style="position:relative;float:left;margin:2px;padding:2px;color:red">count: <span id=selected_people_cnt>0</span></div>
+                    <div id=remove_selected_people style="position:relative;float:right;padding:4px"><img src="/img/gray_close.png" class=coImg16 /></div> 
+                </div>
+                <div id=select_people_sub style="overflow:auto"></div>
+            </div>
+        </div>
+        <div id=fr_chat style="flex:1;display:none;overflow-y:auto;margin:0px 5px"> <!--height:calc(100% - 140px), overflow:auto needed-->
+            <div id=list_chat style="position:relative;width:100%;background-color:white;border:1px solid darkgray;overflow-y:auto"></div> <!--position:relative for endless scrolling(checking position().top-->
+        </div>
+        <div id=fr_setting style="flex:1;display:none;flex-direction:column;background-color:white;border:1px solid darkgray;overflow:auto;margin:10px 5px 0px 5px">
+            <div class=coSettingRow style="border-bottom:2px solid darkgray;padding-bottom:10px">
+                <div class=coSettingLabel>
+                    <div style="width:64px;height:64px;display:flex;align-items:center;justify-content:center;border:1px solid darkgray">
+                        <img id=img_pict style="width:100%;height:100%" />
+                    </div>
+                </div>
+                <div style="display:flex;align-items:flex-end;justify-content:flex-start;cursor:pointer">
+                    <div id=pict_browse class=picBtn>Browse</div>
+                    <div id=pict_upload class=picBtn style="margin-left:10px">Upload</div>
+                    <div id=pict_delete class=picBtn style="margin-left:10px">Delete</div>
+                    <div id=btn_reset_auth class=picBtn style="margin-left:20px">Reset Authentication</div>
+                    <input id=file_upload type=file accept="image/*" style="display:none">
+                </div>
+            </div>
+            <div class=coSettingRow>
+                <div class=coSettingLabel>Nick Name</div>
+                <input id=in_nicknm data-role=none spellcheck=false placeholder='100 bytes. Emoji accepted.' style="flex-grow:1;border:1px solid darkgray" />
+            </div>
+            <div class=coSettingRow>
+                <div class=coSettingLabel>Job Description</div>
+                <input id=in_job data-role=none spellcheck=false placeholder='50 bytes' style="flex-grow:1;border:1px solid darkgray" />
+            </div>
+            <div class=coSettingRow>
+                <div class=coSettingLabel>Absence</div>
+                <input id=in_abcd data-role=none spellcheck=false placeholder='8 bytes. eg) biztrip, dayoff' style="width:200px;border:1px solid darkgray" />
+            </div>
+            <div class=coSettingRow>
+                <div class=coSettingLabel>Absence</div>
+                <input id=in_abnm data-role=none spellcheck=false placeholder='50 bytes. eg) 08/15~08/23' style="width:200px;border:1px solid darkgray" />
+            </div>
+            <div class=coSettingRow>
+                <div class=coSettingLabel>On Start<br>(Web Only)</div>
+                <label for=chk_standalone class=coSettingWrap>
+                    <input type=checkbox id=chk_standalone name=chk_standalone class=coSettingChkbox />
+                    <span class=coSettingSpan>Run standalone</span>
+                </label>
+            </div>
+            <div class=coSettingRow>
+                <div class=coSettingLabel>Noti On/Off</div>
+                <label for=chk_notioff class=coSettingWrap>
+                    <input type=checkbox id=chk_notioff name=chk_notioff class=coSettingChkbox />
+                    <span class=coSettingSpan>Turn all off</span>
+                </label>
+            </div>
+            <div class=coSettingRow>
+                <div class=coSettingLabel>Noti Sound<br>(Mobile Only)</div>
+                <label for=chk_soundoff class=coSettingWrap>
+                    <input type=checkbox id=chk_soundoff name=chk_soundoff class=coSettingChkbox />
+                    <span class=coSettingSpan>Off (Vibration On)</span>
+                </label>
+            </div>
+            <div class=coSettingRow>
+                <div class=coSettingLabel>Noti Sound<br>(Mobile Only)</div>
+                <input id=in_fr data-role=none spellcheck=false placeholder='0900' style="width:60px;text-align:center;border:1px solid darkgray;margin-right:3px" /> ~
+                <input id=in_to data-role=none spellcheck=false placeholder='1800' style="width:60px;text-align:center;border:1px solid darkgray;margin-left:3px" />
+                <span id=spn_clear class=coSettingSpan style="color:#0082AD;cursor:pointer">Clear</span>
+            </div>
+            <div class=coSettingRow>
+                <div class=coSettingLabel>Noti Display</div>
+                <label for=chk_bodyoff class=coSettingWrap>
+                    <input type=checkbox id=chk_bodyoff name=chk_bodyoff class=coSettingChkbox />
+                    <span class=coSettingSpan>Hide content</span>
+                </label>
+            </div>
+            <div class=coSettingRow>  
+                <div class=coSettingLabel>Noti Display</div>
+                <label for=chk_senderoff class=coSettingWrap>
+                    <input type=checkbox id=chk_senderoff name=chk_senderoff class=coSettingChkbox />
+                    <span class=coSettingSpan>Hide sender</span>
+                </label>
+            </div>
+            <div class=coSettingRow>  
+                <div class=coSettingLabel>Log File<br>(Mobile Only)</div>
+                <input id=in_showlog type=number data-role=none spellcheck=false value="0" style="width:30px;text-align:center;border:1px solid darkgray;margin:0px 5px" />
+                <div id=btn_showlog class=picBtn style="background:lightgray;margin-left:5px">Show Log</div>
+                <div id=btn_deletelog class=picBtn style="background:lightgray;margin-left:5px">Delete Log</div>
+            </div>            
+        </div>
+        <div id=fr_menu_bottom style="height:50px;display:none;align-items:center;margin:0px 5px">
+            <div id=btn_new class="coMenuBtn people chat"><img src="/img/white_chat.png" class=coImgMenu /><span>New</span></div>
+            <div id=btn_me class="coMenuBtn people"><img src="/img/white_chattome.png" class=coImgMenu /><span>ToMe</span></div>
+            <div id=btn_read class="coMenuBtn chat"><img src="/img/white_notify.png" class=coImgMenu /><span>Read</span></div>
+            <div id=btn_noti class="coMenuBtn chat"><img src="/img/white_notify.png" class=coImgMenu /><span>Notify</span></div>
+            <div id=btn_exit class="coMenuBtn chat"><img src="/img/white_exit.png" class=coImgMenu /><span>Exit</span></div>
+            <div id=btn_ok class="coMenuBtn setting"><img src="/img/white_yes.png" class=coImgMenu /><span>OK</span></div>
+            <div id=btn_cancel class="coMenuBtn setting"><img src="/img/white_no.png" class=coImgMenu /><span>Cancel</span></div>
+        </div>
+    </div>
+    <script>
+        $.when($.ready).done(async function() {
+            try {                
+                await $.getScript("/common/jay_common.js")
+                await $.getScript("/common/jay_main.js")
+                hush.webview.chk()
+                g_list = $("#list_chat")
+                g_year = (new Date()).getFullYear().toString()
+                nodeIndent = hush.webview.on ? 15 : 30
+                const param = hush.http.getParamsFromLocation()
+                g_win_type = param.type //invite, member, org, org_web
+                if (hush.webview.on && g_win_type != "org_web") { //org_web means mobile web
+                    if (!g_win_type) {
+                        $("#in_search").width(80)
+                        $("#btn_collapseall").hide()
+                        $("#btn_expandall").hide()
+                    }
+                    $("#btn_reset_auth").hide()
+                    $("#selected_people").width(100)
+                    $("#btn_refresh").show()
+                    $("#btn_logout").show()
+                    const _warn = "Mobile Web not supported.<br>Please install app."
+                    if (hush.webview.ios) {
+                    } else if (hush.webview.and) {
+                        try {
+                            if (!g_win_type) { 
+                                AndroidMain.procAfterOpenMain()
+                            } else {
+                                AndroidPopup.procAfterOpenPopup()
+                            }
+                        } catch (exAnd) {
+                            hush.msg.alert(_warn, {  
+                                "Goto install page": function() { 
+                                    hush.msg.close() 
+                                    location.replace("../appdown")
+                                }, "Cancel": function() { 
+                                    hush.msg.close()
+                                } 
+                            }, "Confirm")
+                        }
+                    } else {
+                        hush.msg.alert("Only Android or iOS can be supported.")
+                        return
+                    }
+                }
+                hush.webview.ready = true
+                //index.html invoked from 5 cases as follows
+                //1) onLoad 2) invite button from chat.html (invite) 3) newchat button from Chat Tab (member) 4) onRegistering Userid (org) 5) Selecting organization code
+                if (g_win_type) {
+                    $("#fr_header_bar").hide()
+                    $("#fr_header_tab").hide()
+                    $(".chat").hide()
+                    $(".setting").show()
+                    if (!hush.webview.on || g_win_type == "org_web") {
+                        if (g_win_type == "org" || g_win_type == "org_web") {
+                            document.title = "Select Organization"
+                        } else {
+                            document.title = "Select People"
+                        }
+                        g_userid = opener.g_userid
+                        g_usernm = opener.g_usernm
+                        g_orgcd = opener.g_orgcd
+                        procMenuTop(BTN_MODE_PEOPLE, BTN_PEOPLE_COMPANY)
+                    }
+                } else {
+                    const result = await initMain(param.launch, param.winid) //2.11) jay_main.js 3.2) erp_portal.html
+                    if (!result) return
+                    $(".coNav").on("click", function() { procMenuTop(this.id) })
+                    $("#btn_team, #btn_company").on("click", function() { procMenuPeople(this.id) })
+                    $("#btn_new").on("click", function() { 
+                        if (g_mode == BTN_MODE_PEOPLE) {
+                            const mem = $(".mem")
+                            if (mem.length == 0) {
+                                hush.msg.toast(hush.cons.msg.row_not_selected)
+                                return
+                            }
+                            if (!hush.webview.on) {
+                               hush.room.create("newFromMain", g_token10)
+                            } else {
+                                const useridArr = []
+                                for (let item of mem) {
+                                    const id = $(item).attr("id") //add_xxx
+                                    useridArr.push(id.substring(4))
+                                }
+                                procNewChat(useridArr)                          
+                            }
+                        } else {
+                            if (!hush.webview.on) {
+                                g_memWin = hush.util.winopen(hush.cons.app + "/index?type=member", 740, 650)
+                            } else {
+                                const urlStr = hush.cons.app + "/index?type=member"
+                                if (hush.webview.ios) {
+                                } else if (hush.webview.and) {
+                                    AndroidMain.openPopup(urlStr, "")
+                                }
+                            }
+                        }
+                    })
+                    $("#btn_me").on("click", function() { 
+                        if (!hush.webview.on) {
+                            hush.room.create("me", g_token10)
+                        } else {
+                            const new_roomid = hush.util.createId(g_token10)
+                            const rq = { masterid : g_userid, masternm : g_usernm, userids : [g_userid] }
+                            if (hush.webview.ios) {
+                            } else if (hush.webview.and) { 
+                                AndroidMain.openRoom("newFromMain", new_roomid, "", JSON.stringify(rq))
+                            }
+                        }
+                    })
+                    $("#btn_noti").on("click", function() { 
+                        const checked = $(".chkbox_portal:checked")
+                        if (checked.length == 0) {
+                            hush.msg.toast(hush.cons.msg.row_not_selected)
+                            return
+                        }
+                        checked.each(function(idx, item) {
+                            const _roomid = item.id.substring(4)
+                            const _toggle = ($("#alarm_" + _roomid).css("display") == "none") ? "X" : ""
+                            const rq = { kind : "noti", value : _toggle, userid : g_userid, roomid : _roomid }
+                            if (hush.webview.ios) {
+                            } else if (hush.webview.and) { 
+                                AndroidCom.send(hush.cons.sock_ev_set_env, JSON.stringify(rq), "parent", null, false) //procMsg=false
+                            } else {
+                                hush.sock.send(hush.socket, hush.cons.sock_ev_set_env, rq, "parent")
+                            }
+                        })
+                    })
+                    $("#btn_read").on("click", function() { 
+                        const checked = $(".chkbox_portal:checked")
+                        if (checked.length == 0) {
+                            hush.msg.toast(hush.cons.msg.row_not_selected)
+                            return
+                        }
+                        checked.each(function(idx, item) {
+                            const _roomid = item.id.substring(4)
+                            const rq = { type : "updateall", senderkey : g_userkey, receiverid : g_userid, roomid : _roomid, first_queried : "Y" }
+                            if (hush.webview.ios) {
+                            } else if (hush.webview.and) { 
+                                AndroidCom.send(hush.cons.sock_ev_read_msg, JSON.stringify(rq), _roomid, "parent", false) //procMsg=false
+                            } else {
+                                hush.sock.send(hush.socket, hush.cons.sock_ev_read_msg, rq, _roomid, "parent")
+                            }
+                        })
+                    })
+                    $("#btn_exit").on("click", function() { 
+                        //There might be a certain possibility 'leave' message cannot be reached to room members if every member don't open chat room at all after server restart.
+                        //Since when every member don't open chat room, no one can't be joined to that room, so real-time 'leave' message won't be delivered.
+                        //work-around => calling hush.cons.sock_ev_open_room before hush.cons.sock_ev_send_msg with 'leave' on response for sock_ev_open_room ("before_leave" below)
+                        //서버 리스타트후 바로 목록에서 나가기 할 경우 롬조인이 안되서 다른 멤버들에게 전달이 안될 수 있는데 먼저 sock_ev_open_room을 호출하여 처리하면 됨. ("before_leave" below)
+                        const checked = $(".chkbox_portal:checked")
+                        if (checked.length == 0) {
+                            hush.msg.toast(hush.cons.msg.row_not_selected)
+                            return
+                        }
+                        hush.msg.alert("All messages in this chat room will be gone when you leave. Continue?", { 
+                            "Yes": function() {                                 
+                                checked.each(function(idx, item) {
+                                    const _roomid = item.id.substring(4)
+                                    const rq = { from : "before_leave", userid : g_userid } //"before_leave" is not practically used at server (just dummy)
+                                    if (hush.webview.ios) {
+                                    } else if (hush.webview.and) {
+                                        AndroidCom.send(hush.cons.sock_ev_open_room, JSON.stringify(rq), _roomid, "parent", false) //procMsg=false
+                                    } else {
+                                        hush.sock.send(hush.socket, hush.cons.sock_ev_open_room, rq, _roomid, "parent")
+                                    }
+                                })
+                                hush.msg.close()
+                                $("#chk_selectall").prop("checked", false)
+                            }, "No": function() { 
+                                hush.msg.close()
+                            } 
+                        }, "Leave Room", 200)
+                    })
+                }
+                $("#btn_refresh").on("click", function() { //mobile only
+                    AndroidMain.reload()
+                })
+                $("#btn_logout").on("click", function() { //mobile only
+                    hush.msg.alert("You're going to logout. Continue?", { 
+                        "Yes": function() {                                 
+                            AndroidMain.logout()
+                        }, "No": function() { 
+                            hush.msg.close()
+                        } 
+                    }, "Logout", 200)
+                })
+                $("#chk_selectall").on("change", function() { 
+                    if (g_mode == BTN_MODE_PEOPLE) {
+                        $(".chkbox_people").prop("checked", $(this).is(":checked"))
+                        $(".chkbox_people").each(function(idx, item) {
+                            if (g_mode_people == BTN_PEOPLE_COMPANY) {
+                                //checkbox(chk_selectall) hidden
+                            } else {
+                                const _userid = item.id.substring(4)
+                                procSelect(_userid)
+                            }                            
+                        })
+                    } else {
+                        $(".chkbox_portal").prop("checked", $(this).is(":checked"))
+                    }
+                })
+                $("#in_search").keyup(function(e) { if (e.keyCode === 13) procSearch() })
+                $("#btn_search").on("click", function() { 
+                    procSearch() 
+                })
+                $("#remove_selected_people").on("click", function() {
+                    $("#select_people_sub").empty()
+                    $(".orgsel").prop("checked", false)
+                    $(".orgsel").css("opacity", "1.0")
+                    $(".chkbox_people").prop("checked", false)
+                    $("#chk_selectall").prop("checked", false)                    
+                    procMemPanel()
+                })
+                $("#pict_browse").on("click", function() {
+                    $("#file_upload").val("")
+                    $("#file_upload").trigger("click")
+                })
+                $("#pict_upload").on("click", function() {
+                    const blobUrl = $("#img_pict").attr("src")
+                    if (!blobUrl) {
+                        hush.msg.toast("Image file needed.")
+                        return
+                    }
+                    const objUrl = hush.http.parseBlobUrl(blobUrl)
+                    if (!objUrl) {
+                        hush.msg.toast("Mime type not found.")
+                        return
+                    }
+                    const xhr = new XMLHttpRequest()
+                    xhr.open("GET", blobUrl, true) //since blobUrl might be just blob without any infomation for base64 and contentType eg) blob:https://~
+                    xhr.responseType = "blob"
+                    xhr.onload = function(e) {
+                        if (this.status == 200) {
+                            const blob = this.response
+                            const fd = new FormData()
+                            fd.append("userid", g_userid)
+                            fd.append("type", "U") //U(Update Picture), D(Delete Picture)
+                            fd.append("mimetype", objUrl.mimetype)
+                            fd.append("file", blob)
+                            hush.http.ajaxFormData(hush.cons.route + "/proc_picture", fd, (rs) => {
+                                hush.msg.toast("Upload done.")
+                            })
+                        }
+                    }
+                    xhr.send()
+                })
+                $("#pict_delete").on("click", function() {
+                    const fd = new FormData()
+                    fd.append("userid", g_userid)
+                    fd.append("type", "D") //U(Update Picture), D(Delete Picture)
+                    hush.http.ajaxFormData(hush.cons.route + "/proc_picture", fd, (rs) => {
+                        $("#img_pict").attr("src", hush.cons.img_noperson)
+                        hush.msg.toast("Delete done.")
+                    })
+                })
+                $("#file_upload").change(function() {
+                    try {
+                        const file = this.files[0]
+                        const obj = hush.util.getFileNameAndExtension(file.name)
+                        if (obj.ext == "" || !hush.cons.sublink_ext_image.includes(obj.ext)) {
+                            hush.msg.alert("Image file needed. (" + hush.cons.sublink_ext_image + ")")
+                            return
+                        }
+                        if (file.size > hush.cons.max_picture_size) {
+                            hush.msg.alert("File size up to " + hush.util.formatBytes(hush.cons.max_picture_size) + "(" + hush.cons.max_picture_size + "). Now is " + file.size + " bytes.")
+                            return
+                        }
+                        const reader = new FileReader()
+                        reader.readAsDataURL(file)
+                        reader.addEventListener("load", function () {
+                            $("#img_pict").attr("src", reader.result)
+                        }, false)
+                    } catch (ex) { 
+                        hush.msg.alert("file_upload: " + ex.message)
+                    }
+                })
+                $("#btn_reset_auth").on("click", function() { //displays in Web Only
+                    hush.msg.alert("You're going to reset authentication (including mobile). Continue?", { 
+                        "Yes": async function() { 
+                            try {
+                                const rq = { mode : "passkey", userid : g_userid }
+                                const rs = await hush.http.ajax(hush.cons.route + "/proc_user", rq, "POST") //See in proc_user.js and login.js, too.
+                                if (rs.code != hush.cons.result_ok) {
+                                    hush.msg.alert(rs.msg)
+                                    return
+                                }
+                                const dataObj = { userid : g_userid } //disconnect mobile socket
+                                hush.sock.send(hush.socket, hush.cons.sock_ev_cut_mobile, dataObj)
+                                hush.msg.close()
+                            } catch (ex) {
+                                hush.msg.alert("btn_reset_auth: " + ex.message)
+                            }
+                        }, "No": function() { 
+                            hush.msg.close()
+                        } 
+                    }, "Reset Authentication", 200)
+                })
+                $("#in_nicknm,#in_job,#in_abcd,#in_abnm,#chk_standalone,#chk_notioff,#chk_soundoff,#in_fr,#in_to,#chk_bodyoff,#chk_senderoff").on("change", function() { 
+                    g_setting_changed = true 
+                })   
+                $("#spn_clear").on("click", function() {  
+                    if ($("#in_fr").val().trim() != "") {
+                        $("#in_fr").val("")
+                        g_setting_changed = true 
+                    }
+                    if ($("#in_to").val().trim() != "") {
+                        $("#in_to").val("")
+                        g_setting_changed = true 
+                    }
+                })
+                $("#btn_ok").on("click", async function() {
+                    try {
+                        if (g_win_type == "invite") {
+                            let useridArr = [], usernmArr = []
+                            $(".mem").each(function(idx, item) { 
+                                const _userid = item.id.substring(4)
+                                useridArr.push(_userid) 
+                                usernmArr.push($("#addnm_" + _userid).html())
+                            }).promise().done(function() {
+                                if (useridArr.length == 0) {
+                                    hush.msg.toast("No selection.")
+                                    return
+                                } 
+                                if (!hush.webview.on) {
+                                    opener.procInvite(useridArr, usernmArr)
+                                    window.close()
+                                } else {
+                                    AndroidPopup.invite(useridArr.join(hush.cons.deli), usernmArr.join(hush.cons.deli))
+                                }
+                            })
+                        } else if (g_win_type == "member") {
+                            let useridArr = []
+                            $(".mem").each(function(idx, item) { 
+                                const _userid = item.id.substring(4)
+                                useridArr.push(_userid)
+                            }).promise().done(function() { 
+                                if (useridArr.length == 0) {
+                                    hush.msg.toast("No selection.")
+                                    return
+                                } 
+                                if (!hush.webview.on) {
+                                    opener.procNewChatFromPopup(useridArr)
+                                    window.close()
+                                } else {
+                                    AndroidPopup.invite(useridArr.join(hush.cons.deli), "")
+                                }
+                            })
+                        } else if (g_win_type == "org" || g_win_type == "org_web") { //only web
+                            let orgcd, orgnm, i = 0
+                            $(".orgsel").each(function(idx) {
+                                if ($(this).prop("checked")) {
+                                    const _id = this.id
+                                    const _idx = _id.substring(7)
+                                    orgcd = $("#orgrow_" + _idx).attr("orgcd")
+                                    orgnm = $("#orgnm_" + _idx).html()
+                                    i += 1
+                                }
+                            }).promise().done(function() { 
+                                if (orgcd != "") {
+                                    if (i > 1) {
+                                        hush.msg.alert("Single Select Only")
+                                        return
+                                    }
+                                    opener.procOrgFromPopup(orgcd, orgnm)
+                                    window.close()
+                                } else {
+                                    hush.msg.toast("None selected.")
+                                }
+                            })
+                        } else { //setting
+                            if (!g_setting_changed) {
+                                hush.msg.toast("Nothing changed.")
+                                return
+                            }           
+                            const overlay = hush.msg.toast("saving..", false)
+                            if (!procSetting("save")) return
+                            setTimeout(() => { hush.msg.toastEnd(overlay) }, 1000)
+                            g_setting_changed = false
+                        }
+                    } catch (ex) {
+                        hush.msg.alert("btn_ok: " + ex.message)
+                    }
+                })
+                $("#btn_cancel").on("click", function() {
+                    if (g_win_type) {
+                        if (!hush.webview.on || g_win_type == "org_web") {
+                            window.close()
+                        } else {
+                            AndroidPopup.close()
+                        }
+                    } else {
+                        if (!g_setting_changed) {
+                            hush.msg.toast("Nothing changed.")
+                            return
+                        }
+                        procSetting("cancel")
+                        procMenuTop(BTN_MODE_CHAT)
+                        g_setting_changed = false
+                    }
+                })
+                $("#btn_showlog").on("click", function() {
+                    let num = $("#in_showlog").val()
+                    num = parseInt(num) || 0
+                    AndroidMain.showLog(num)
+                })
+                $("#btn_deletelog").on("click", function() {
+                    AndroidMain.deleteLog()
+                })
+                $(window).bind("unload", function() { //$(window).unload(function() { deprecated as of 1.8
+                    procUnload()
+                    if (g_memWin && !g_memWin.closed) g_memWin.close()
+                })
+            } catch (ex) {
+                hush.msg.alert("document.ready: " + ex.message)
+            }
+        }).fail(function(ex) {
+            hush.msg.alert("document.ready.fail: " + ex.message)
+        })        
+    </script>
+</body>
+</html>

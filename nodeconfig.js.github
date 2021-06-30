@@ -1,0 +1,27 @@
+module.exports = { 
+	"mysql" : {
+        	"hushsbay" : {
+				"host" : "xxx.com",
+				"poolsize" : 50,
+				"port" : 3306,
+				"admin" : {
+					"user" : "xxx",
+					"pwd" : "xxx",
+				},
+        	},             
+	   },
+	"redis" : {
+		"host" : "127.0.0.1",
+		"port" : 6379,
+		"pwd" : "xxx"
+	},
+	"jwt" : {
+		"algo" : "xxx",
+		"key" : "xxx", //32bytes
+		"expiry" : "36500 days" //for not only web but also mobile
+	},
+	"crypto" : {
+		"key" : "xxx" //32bytes
+	}
+}
+

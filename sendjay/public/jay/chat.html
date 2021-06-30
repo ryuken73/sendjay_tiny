@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sendjay</title>
+    <link id="favicon" href="/img/sendjay_darkblue.png" rel="shortcut icon" type="image/x-icon"/>
+    <link rel="stylesheet" href="/plugin/jquery-ui-smoothness-1.12.1.min.css">
+    <link rel="stylesheet" href="/common/jay_common.css?001">
+    <script src="/plugin/jquery-3.4.1.min.js"></script>
+    <script src="/plugin/jquery-ui-smoothness-1.12.1.min.js"></script>
+    <script src="/plugin/jquery.cookie.js"></script>
+    <script src="/plugin/lodash.min.js"></script><!--for debounce (scroll event)-->
+    <script src="/plugin/moment.min.js"></script>
+    <script src="/plugin/moment-timezone-with-data-1970-2030.min.js"></script>
+    <style>
+        .plate { width:calc(100% - 96px);flex-grow:1;position:relative;display:flex;flex-direction:column;background-color:white;border:1px solid darkgray;overflow:auto;margin-right:2px }
+        .mem { display:flex;flex-direction:column;background:#fdf5f6;border:1px solid lightgray;overflow:auto;margin:4px 4px 0px 4px }
+        .menuBtn { display:flex;flex-direction:column;background:#0082AD;color:white;border:1px solid lightgray;border-radius:5px;overflow:hidden;padding:10px 5px;margin:15px 4px 0px 4px }
+        .menuBtnCell { display:flex;flex-direction:column;background:steelblue;color:white;border:1px solid lightgray;border-radius:5px;overflow:hidden;padding:10px 5px;margin:15px 4px 0px 4px }
+        .result { display:flex;flex-direction:column;background:#fdf5f6;border:1px solid lightgray;overflow:auto;margin:4px 4px 0px 4px }
+        .unread { font-size:11px;color:#FD760B;cursor:pointer }
+        .failure { font-size:11px;color:red;cursor:pointer }
+    </style>
+</head>
+<body>
+    <div id=main_pg style="width:100%;height:100%;display:flex;flex-direction:column;background-color:#eaeaea">
+        <div id=fr_menu_top style="height:45px;display:flex;justify-content:space-between;margin:0px 3px">    
+            <div style="display:flex;align-items:center">
+                <input id=in_search type=search spellcheck=false onsearch="OnSearch(this)" style="width:80px" />
+                <div id=btn_search class=coImgBtn><img src="/img/white_search.png" class=coImg24 /></div>
+                <div id=btn_close_search class=coMenuFlat style="display:none"><img src="/img/gray_close.png" class=coImg16 /></div>
+                <div id=btn_qry_etc class=coMenuFlat>File/Image/Link</div>
+                <span id=txt_unread_notice style="display:none;color:red;cursor:pointer;margin-left:10px">Unable to make read</span>
+            </div>
+            <div id=fr_menu_top_right_m style="display:none;align-items:center;margin-right:5px">
+                <img id=img_disconn src="/img/disconnected.png" class=coImg24 style="display:none;margin-top:5px" />
+                <img id=btn_people_m src="/img/meeting.png" class=coImg24 style="margin-left:8px" />
+                <img id=btn_menu_m src="/img/menu.png" class=coImg24 style="margin-left:8px" />
+            </div>
+        </div><!--fr_main's position should be relative for imgplate. See $("#fr_main").height("calc(100% - 190px)") for PC Web-->  
+        <div id=fr_main style="position:relative;height:calc(100% - 145px);display:flex;align-items:stretch;margin:0px 3px">
+            <div id=list_msg class=plate></div><!--position should be relative for checking position().top-->
+            <div id=imgplate style="position:absolute;display:none;left:0;bottom:0;width:200px;height:200px;background-color:white;border:1px solid darkgray"></div>
+            <span id=txt_msg_added style="position:absolute;display:none;left:0;bottom:0;height:32px;line-height:32px;cursor:pointer;background:steelblue;color:white;border-top:1px solid darkgray;padding:0px 5px"></span>
+            <div id=list_people style="display:none;width:96px;overflow:hidden;background-color:white;border:1px solid darkgray;margin-left:auto">
+                <div style="height:16px;color:darkgray;border-bottom:1px solid lightgray;padding-left:3px">
+                    <span>count: </span><span id=people_cnt>0</span><span id=result_cnt style="display:none">0</span>
+                </div>
+                <div id=people_sub style="height:calc(100% - 16px);overflow:auto"></div>
+                <div id=result_sub style="display:none;height:calc(100% - 16px);overflow:auto"></div>
+            </div>
+            <div id=list_menu_m style="display:none;width:96px;overflow:hidden;background-color:white;border:1px solid darkgray;margin-left:auto">
+                <div id=btn_invite_m class="menuBtn chat">Invite</div>
+                <div id=btn_delete_all_m class="menuBtn chat">DeleteAll</div>
+                <div id=btn_rename_m class="menuBtn chat">Rename</div>
+                <div id=btn_exit_m class="menuBtn chat">Exit</div>
+                <div id=btn_cancel_room_m class="menuBtn chat">Cancel</div>
+                <div id=btn_copy_cell_m class="menuBtnCell cell single">Copy</div>
+                <div id=btn_revoke_cell_m class="menuBtnCell cell single">Revoke</div>
+                <div id=btn_delete_cell_m class="menuBtnCell cell">Delete</div>
+                <div id=btn_cancel_cell_m class="menuBtnCell cell">Cancel</div>
+            </div>
+        </div>
+        <div style="position:relative;height:20px;display:flex;margin:3px 3px 0px 3px"><!-- <div style="width:100%;height:20px;position:relative;font-size:14px"> -->
+            <div id=fr_tip class=coDotDot style="width:calc(100% - 80px);height:100%;float:left;color:#005192;margin-left:3px"></div>
+            <div id=fr_sendcopy style="display:none;width:calc(100% - 80px);height:100%;float:left;margin-left:5px">
+                <span id=send_copy style='line-height:20px;color:#FD760B;cursor:pointer;margin-left:40px'>[SendCopy]</span>
+                <span id=cancel_copy style='line-height:20px;color:#FD760B;cursor:pointer;margin-left:5px'>[CancelCopy]</span>
+                <span id=btn_send_img_m style='display:none;line-height:20px;color:#005192;cursor:pointer;margin-left:40px'>[Send]</span>
+                <span id=btn_cancel_img_m style='display:none;line-height:20px;color:#005192;cursor:pointer;margin-left:5px'>[Cancel]</span>
+            </div>
+            <div style="width:70px;height:100%;float:right;text-align:right;margin-right:5px">
+                <span id=fr_byte style='line-height:20px'></span>
+            </div>
+        </div>
+        <div id=fr_in style="position:relative;height:70px;display:flex;align-items:stretch;margin:3px 3px 0px 3px">
+            <textarea id=in_chat spellcheck=false style="width:100%;height:100%;resize:none;border:1px solid darkgray"></textarea>
+            <div id=btn_file_m style="position:absolute;top:0px;left:0px;width:40px;height:100%;display:none;align-items:center;justify-content:center;background-color:#0082AD;border:1px solid darkgray">
+                <img src="/img/white_upload.png" style="width:24px;height:24px" />
+            </div>
+            <div id=btn_send_m style="position:absolute;top:0px;right:0px;width:40px;height:100%;display:none;align-items:center;justify-content:center;background-color:#0082AD;border:1px solid darkgray">
+                <img src="/img/white_send.png" style="width:24px;height:24px" />
+            </div>
+        </div>
+        <div id=fr_menu_bottom style="position:relative;height:45px;display:none;align-items:center;margin:3px 3px 0px 3px">
+            <div id=btn_send class="coMenuBtn chat" style="margin-left:3px"><img src="/img/white_send.png" class=coImgMenu /><span>Send</span></div>
+            <div id=btn_file class="coMenuBtn chat"><img src="/img/white_upload.png" class=coImgMenu /><span>File</span></div>
+            <div id=btn_invite class="coMenuBtn chat"><img src="/img/white_invite.png" class=coImgMenu /><span>Invite</span></div>
+            <div id=btn_delete_all class="coMenuBtn chat"><img src="/img/white_trash.png" class=coImgMenu /><span>DeleteAll</span></div>
+            <div id=btn_rename class="coMenuBtn chat"><img src="/img/white_tag.png" class=coImgMenu /><span>Rename</span></div>
+            <div id=btn_exit class="coMenuBtn chat"><img src="/img/white_exit.png" class=coImgMenu /><span>Exit</span></div>
+            <div id=btn_send_img class="coSubMenuBtn img" style="display:none"><img src="/img/white_yes.png" class=coImgMenu /><span>SendImage</span></div>
+            <div id=btn_cancel_img class="coSubMenuBtn img" style="display:none"><img src="/img/white_no.png" class=coImgMenu /><span>Cancel</span></div>
+            <div id=btn_copy_cell class="coSubMenuBtn cell single" style="display:none"><img src="/img/white_copy.png" class=coImgMenu /><span>Copy</span></div>
+            <div id=btn_revoke_cell class="coSubMenuBtn cell single" style="display:none"><img src="/img/white_revoke.png" class=coImgMenu /><span>Revoke</span></div>
+            <div id=btn_delete_cell class="coSubMenuBtn cell" style="display:none"><img src="/img/white_trash.png" class=coImgMenu /><span>Delete</span></div>
+            <div id=btn_cancel_cell class="coSubMenuBtn cell" style="display:none"><img src="/img/white_no.png" class=coImgMenu /><span>Cancel</span></div>
+            <div id=sel_info style="display:none;font-weight:bold;color:darkgreen;margin-left:10px">
+                <span id=cnt_sel>1</span> selected
+            </div>
+        </div>
+        <input id=file_upload type=file multiple style="display:none">
+    </div>
+    <script>
+        $.when($.ready).done(async function() {
+            try {
+                await $.getScript("/common/jay_common.js")
+                await $.getScript("/common/jay_chat.js")
+                hush.webview.chk()
+                g_in_chat = $("#in_chat")
+                g_list_msg = $("#list_msg")
+                const param = hush.http.getParamsFromLocation()
+                g_type = param.type
+                g_roomid = param.roomid
+                g_origin = param.origin
+                if (hush.webview.on) {
+                    g_focus_for_webview = true
+                    $("#fr_menu_top_right_m").css("display", "flex")
+                    $("#btn_send").hide()
+                    $("#btn_file").hide()
+                    $("#btn_file_m").css("display", "flex")
+                    $("#btn_send_m").css("display", "flex")
+                    g_in_chat.css("padding", "0px 40px 0px 45px")
+                    AndroidRoom.procAfterOpenRoom()
+                } else {
+                    document.oncontextmenu = new Function("return false") //for context menu (prevent mouse right click for pc web only)
+                    g_focus_for_webview = false
+                    $("#in_search").width(100)
+                    $("#fr_main").height("calc(100% - 190px)")
+                    g_in_chat.attr("placeholder", "Shift+Enter to change line. Paste here to send image.")
+                    $("#fr_menu_bottom").css("display", "flex")
+                    g_socket = opener.hush.socket
+                    g_userkey = opener.hush.user.key 
+                    g_userid = opener.hush.user.id
+                    g_usernm = opener.hush.user.nm
+                    g_orgcd = opener.hush.user.orgcd
+                    g_token10 = opener.hush.user.token.slice(-10)
+                    g_role = opener.hush.user.role
+                    if (g_type == "newFromMain") {
+                        const mem = $(".mem", opener.document)
+                        const useridArr = []
+                        for (let item of mem) {
+                            const id = $(item).attr("id") //add_xxx
+                            useridArr.push(id.substring(4)) //xxx
+                        }
+                        if (useridArr.indexOf(g_userid) == -1) useridArr.push(g_userid) //me included   
+                        const rq = { masterid : g_userid, masternm : g_usernm, userids : useridArr }
+                        hush.sock.send(g_socket, hush.cons.sock_ev_create_room, rq, g_roomid)               
+                    } else if (g_type == "newFromPopup") {
+                        if (opener.g_useridArr.indexOf(g_userid) == -1) opener.g_useridArr.push(g_userid) //me included
+                        const rq = { masterid : g_userid, masternm : g_usernm, userids : opener.g_useridArr }
+                        hush.sock.send(g_socket, hush.cons.sock_ev_create_room, rq, g_roomid)
+                    } else if (g_type == "me") {    
+                        const rq = { masterid : g_userid, masternm : g_usernm, userids : [g_userid] }
+                        hush.sock.send(g_socket, hush.cons.sock_ev_create_room, rq, g_roomid)
+                    } else if (g_type == "open") {
+                        if (opener.procUnreadTitle) opener.procUnreadTitle(g_roomid)
+                        const rq = { from : param.from, userid : g_userid }
+                        hush.sock.send(g_socket, hush.cons.sock_ev_open_room, rq, g_roomid)
+                    }
+                    procScrollEvent()
+                    chkTyping()
+                }
+                if (localStorage[g_roomid]) g_in_chat.val(localStorage[g_roomid])
+                hush.webview.ready = true
+                $("#in_search").keyup(function(e) {                    
+                    if (e.keyCode == 13 && !e.shiftKey) $("#btn_search").click()
+                })
+                $("#btn_search").on("click", function() { 
+                    const _keyword = $("#in_search").val().trim()
+                    if (_keyword == "") return
+                    toggleResult(true)
+                    getMsgList("search", _keyword)
+                    setTimeout(() => $("#in_search").blur(), 500)
+                })
+                $("#btn_close_search").on("click", function() { 
+                    $("#txt_msg_added").hide()
+                    toggleResult(false)
+                    getMsgList()
+                    $("#in_search").val("")
+                    setTimeout(() => $("#in_search").blur(), 500)
+                })
+                $("#btn_qry_etc").on("click", function() { 
+                    toggleResult(true)
+                    getMsgList("etc")
+                })
+                $("#btn_people_m").on("click", function() { 
+                    const _toggle = (g_show_list_people == "") ? "X" : ""
+                    const rq = { kind : "dispmem", value : _toggle, userid : g_userid, roomid : g_roomid }
+                    if (hush.webview.ios) {
+                    } else if (hush.webview.and) {
+                        AndroidCom.send(hush.cons.sock_ev_set_env, JSON.stringify(rq), g_roomid, null, true) //procMsg=true
+                    }
+                })
+                $("#btn_menu_m").on("click", function() {
+                    if ($("#list_menu_m").css("display") == "none") {
+                        showCellMenu(false)
+                        showRoomMenu(true)
+                    } else {
+                        showRoomMenu(false)
+                    }
+                })
+                $("#btn_cancel_room_m").on("click", function(e) { showCellMenu(false) })
+                g_in_chat.keyup(function(e) {
+                    if (!hush.webview.on && e.keyCode == 13 && !e.shiftKey) {
+                        sendMsg()
+                    } else {
+                        calcBytes()
+                    }
+                }) //sendMsg() if it's not new line
+                g_in_chat.on("paste", function(e) { //Only Web (not Mobile)
+                    try {
+                        const pastedData = e.originalEvent.clipboardData.items
+                        if (pastedData.length == 0) return
+                        const clipboardItem = pastedData[0]
+                        if (clipboardItem.type.includes("image")) {
+                            const blob = clipboardItem.getAsFile()
+                            if (blob.size > hush.cons.max_size_to_sublink) { //see get_sublink.js
+                                hush.msg.toast("Image too big : " + blob.size + "<br>max : " + hush.util.formatBytes(hush.cons.max_size_to_sublink) + "(" + hush.cons.max_size_to_sublink + "bytes)")
+                                return
+                            }
+                            const blobUrl = URL.createObjectURL(blob)
+                            $("#imgplate").html("<img id=imgbody src=" + blobUrl + " style='width:100%;height:100%'>") 
+                            // $("#imgbody").on("load", function() { //fit the image to real width and height
+                            //     $("#imgbody").width(this.naturalWidth)
+                            //     $("#imgbody").height(this.naturalHeight)
+                            // })
+                            showImgMenu(true)
+                            $("#btn_send_img").off("click").on("click", function(e) { sendMsg("image", blobUrl, blob) })
+                            $("#btn_cancel_img").off("click").on("click", function(e) { showImgMenu(false) })
+                        } else if (clipboardItem.type.includes("text")) {
+                            clipboardItem.getAsString(function(str) {
+                                const _arr = str.split(hush.cons.deli)
+                                if (_arr[0] == "btn_copy_cell") { //e.preventDefault() here has no effect                                    
+                                    g_in_chat.val(g_in_chat.val().replace(str, ""))
+                                    if (g_in_chat.val().trim() != "") {
+                                        hush.msg.alert("chatting text data already exists in input field")
+                                        return
+                                    }                                                        
+                                    const rq = { msgid : _arr[3] }
+                                    if (hush.webview.ios) { 
+                                    } else if (hush.webview.and) { //it's text
+                                        AndroidCom.send(hush.cons.sock_ev_qry_msgcell, JSON.stringify(rq), g_roomid, null, true) //procMsg=true
+                                    } else {
+                                        hush.sock.send(g_socket, hush.cons.sock_ev_qry_msgcell, rq, g_roomid)
+                                    }
+                                } else {
+                                    calcBytes()
+                                }
+                            })
+                        }                        
+                    } catch (ex) { 
+                        hush.msg.alert("paste: " + ex.message)
+                    }
+                })
+                $("#btn_send, #btn_send_m").on("click", function() { sendMsg() })
+                $("#btn_file, #btn_file_m").on("click", function() {
+                    $("#file_upload").val("") //btn_file_m : see webview setting
+				    $("#file_upload").trigger("click")
+                })
+                $("#file_upload").change(function() {
+                    try {
+                        handleFileUpload(this.files)		    	   	
+                    } catch (ex) { 
+                        hush.msg.alert("file_upload: " + ex.message)
+                    }
+                })
+                $("#btn_invite, #btn_invite_m").on("click", function() {
+                    if (!hush.webview.on) { 
+                        g_inviteWin = hush.util.winopen("index?type=invite", 740, 650)
+                    } else {
+                        const urlStr = hush.cons.app + "/index?type=invite" 
+                        if (hush.webview.ios) { 
+                        } else if (hush.webview.and) {
+                            AndroidRoom.openPopup(urlStr, "")
+                            setTimeout(() => showCellMenu(false), 200)
+                        }
+                    }
+                })
+                $("#btn_delete_all, #btn_delete_all_m").on("click", function() { 
+                    hush.msg.alert("Do you want delete all messages in this chat room?", { 
+                        "Yes": function() { 
+                            const rq = { type : "all", receiverid : g_userid, roomid : g_roomid }
+                            if (hush.webview.ios) {
+                            } else if (hush.webview.and) {
+                                AndroidCom.send(hush.cons.sock_ev_delete_msg, JSON.stringify(rq), g_roomid, "parent", true) //procMsg=true
+                            } else {
+                                hush.sock.send(g_socket, hush.cons.sock_ev_delete_msg, rq, g_roomid, "parent")
+                            }
+                            hush.msg.close()
+                            showCellMenu(false)
+                        }, "No": function() { 
+                            hush.msg.close()
+                            showCellMenu(false) 
+                        } 
+                    }, "Delete All", 200)
+                })
+                $("#btn_rename, #btn_rename_m").on("click", function() {
+                    if (g_masterid == g_userid) {
+                        hush.msg.alert("You are owner of this chat room.<br>Decide range for changing of room name.", { 
+                            "To every user": function() { 
+                                hush.msg.close()
+                                dialogRoomRename("all")
+                            }, "To me": function() { 
+                                hush.msg.close()
+                                dialogRoomRename("one")
+                            }, "Cancel": function() { 
+                                hush.msg.close()
+                                if (hush.webview.on) showRoomMenu(false)
+                            } 
+                        }, "Rename", 320)
+                    } else {
+                        dialogRoomRename("one")
+                    }
+                })
+                $("#btn_exit, #btn_exit_m").on("click", function() { 
+                    hush.msg.alert("All messages gone when you leave chat room. Continue?", { 
+                        "Yes": function() { 
+                            const rq = initMsg()
+                            rq.type = "leave"
+                            rq.body = g_usernm + "<br>" + hush.cons.left //when 3 people above
+                            if (hush.webview.ios) {
+                            } else if (hush.webview.and) {
+                                AndroidCom.send(hush.cons.sock_ev_send_msg, JSON.stringify(rq), g_roomid, "parent", true) //procMsg=true
+                            } else {
+                                hush.sock.send(g_socket, hush.cons.sock_ev_send_msg, rq, g_roomid, "parent")
+                            }
+                            hush.msg.close()
+                            if (hush.webview.on) showRoomMenu(false)                           
+                        }, "No": function() { 
+                            hush.msg.close()
+                            if (hush.webview.on) showRoomMenu(false)
+                        } 
+                    }, "Leave Room", 200)
+                })
+                $("#send_copy").on("click", function() {
+                    AndroidRoom.paste()
+                })
+                $("#cancel_copy").on("click", function() {
+                    AndroidRoom.copy("")
+                    $("#fr_tip").show()
+                    $("#fr_sendcopy").hide()
+                })
+                $("#main_pg").on("dragenter", function(e) {
+                    e.stopPropagation()
+                    e.preventDefault()
+                })
+                $("#main_pg").on("dragover", function(e) {
+                    e.originalEvent.dataTransfer.dropEffect = "copy"
+                    e.stopPropagation()
+                    e.preventDefault()
+                })
+                $("#main_pg").on("drop", function(e) {
+                    e.preventDefault()
+                    try {
+                        var _files = e.originalEvent.dataTransfer.files
+                        if (_files.length > 0) { //from outside like file explorer
+                            handleFileUpload(_files)
+                        } else { //text or text/plain
+                            const _data = e.originalEvent.dataTransfer.getData("text")
+                            if (!_data || _data == "") return
+                            var _arr = _data.split(hush.cons.deli)
+                            if (_arr[1] == g_roomid) return //dragging on same room does no action
+                            if (g_in_chat.val().trim() != "") {
+                                hush.msg.alert("Chatting text data already exists in input field.")
+                                return
+                            }
+                            const rq = { msgid : _arr[2] }
+                            if (hush.webview.ios) { 
+                            } else if (hush.webview.and) { //it's text
+                                AndroidCom.send(hush.cons.sock_ev_qry_msgcell, JSON.stringify(rq), g_roomid, null, true) //procMsg=true
+                            } else {
+                                hush.sock.send(g_socket, hush.cons.sock_ev_qry_msgcell, rq, g_roomid)
+                            }
+                        }
+                    } catch (ex) {
+                        hush.msg.alert("drop: " + ex.message)
+                    }
+                })
+                $(document).keyup(function(e) {
+                    if (e.keyCode === 27) window.close() //escape key for web
+                })
+                $(window).focus(function() { ///This focus event is not triggered when window newly opened.
+                    if ($("#txt_msg_added").css("display") == "none") updateAllUnreads()                    
+                })
+                $(window).bind("unload", function() { //$(window).unload(function() { deprecated as of 1.8
+                    if (g_in_chat.val().trim() != "") {
+                        localStorage[g_roomid] = g_in_chat.val().trim()
+                    } else {
+                        if (localStorage[g_roomid]) delete localStorage[g_roomid]
+                    }
+                    if (opener && g_roomid) delete opener.hush.sock.rooms[g_roomid]
+                    if (g_inviteWin && !g_inviteWin.closed) g_inviteWin.close()
+                })
+            } catch (ex) {
+                hush.msg.alert("document.ready: " + ex.message)
+            }
+        }).fail(function(ex) {
+            hush.msg.alert("Error occurred when loading page. " + ex.message)
+        })
+    </script>
+</body>
+</html>

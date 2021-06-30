@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html> 
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sendjay App Download</title>
+    <link id="favicon" href="/img/sendjay_darkblue.png" rel="shortcut icon" type="image/x-icon"/>
+    <link rel="stylesheet" href="/plugin/jquery-ui-smoothness-1.12.1.min.css">
+    <link rel="stylesheet" href="/common/jay_common.css?001">
+    <script src="/plugin/jquery-3.4.1.min.js"></script>
+    <script src="/plugin/jquery-ui-smoothness-1.12.1.min.js"></script>
+    <script src="/plugin/jquery.cookie.js"></script>
+	<style>
+		.btn { width:200px;text-align:center;background:#005192;color:white;border:1px solid black;font-size:18px;padding:30px;margin-top:50px }
+	</style>
+	<script>
+        const procDown = async (id) => {
+			try {
+                const rs = await hush.http.ajax("/applist.json", null)
+                if (!rs) {
+                    hush.msg.alert("Not connected.")
+                    return
+                }                
+				const _url = location.protocol + "//" + location.host + rs[id].path + "/"
+				if (id.endsWith("ios")) {
+                    hush.msg.alert("iOS App will be on 2022.")
+					//hush.msg.toast("App downloading..")
+                    //window.location.href = "itms-services://?action=download-manifest&url=" + _url + rs[id].filename + "&" + hush.util.getRnd().toString()
+				} else {
+                    window.location.href = _url + rs[id].filename + "?" + hush.util.getRnd().toString()
+				}
+			} catch (ex) { 
+				hush.msg.alert(ex.toString())
+			}								
+		}
+
+		$.when($.ready).done(async function() {
+            await $.getScript("/common/jay_common.js")
+            const param = hush.http.getParamsFromLocation()
+            hush.http.removeCache(param.nocache)
+			$("#btn_sendjay_and").click(function() { 
+                if (hush.util.getMobileOSVersion("Android") < 11) { //returns Integer
+                    hush.msg.alert("Sorry for inconvenience. Minimum android version(level) should be 11 (API 30).")
+                    return
+                }
+                procDown("sendjay_and") 
+            })
+			$("#btn_sendjay_ios").click(function() { procDown("sendjay_ios") })
+		}).fail(function(ex) {
+            hush.msg.alert("Error occurred when loading page. " + ex.message)
+        })
+	</script>
+</head>
+<body>
+	<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:50px">
+        <div style="color:#005192;font-size:32px;font-weight:bold">sendjay Download</div>
+        <div id=btn_sendjay_and class=btn>Android App</div>
+        <div id=btn_sendjay_ios class=btn>iOS App</div>
+    </div>
+</body>
+</html>

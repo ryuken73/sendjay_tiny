@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+    <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0" /><!--webview setting needed-->
+    <title>sendjay</title>
+    <link id="favicon" href="/img/sendjay_darkblue.png" rel="shortcut icon" type="image/x-icon"/>
+    <link rel="stylesheet" href="/plugin/jquery-ui-smoothness-1.12.1.min.css">
+    <link rel="stylesheet" href="/common/jay_common.css?001">
+    <style>
+        .save { position:relative;bottom:12px;left:15px;width:32px;height:32px }
+    </style>
+    <script src="/plugin/jquery-3.4.1.min.js"></script>
+    <script src="/plugin/jquery-ui-smoothness-1.12.1.min.js"></script>
+    <script src="/plugin/jquery.cookie.js"></script>
+</head>
+<body>
+    <div id=main_pg style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <video id=videoTab height=100% width=100% controls style="display:none"></video>
+        <div id=imgbody style="display:none"><img id=img></div>
+    </div>
+    <img id=btn_save src="/img/download.png" class=save style="display:none" />
+    <script>
+        let toggleSaveVisible = false
+        $.when($.ready).done(async function() {
+            try {
+                await $.getScript("/common/jay_common.js")
+                await $.getScript("/common/jay_popup.js")
+                hush.webview.chk() 
+                const param = hush.http.getParamsFromLocation()                
+                g_type = param.type
+                g_path = encodeURIComponent(param.path)
+                g_msgid = param.msgid
+                if (g_type == "play") { //for pc web and mobile
+                    g_videoTab = $("#videoTab")
+                    g_videoTab.show()
+                    if (!hush.webview.on) {
+                        g_videoTab.attr("width", param.width)
+                        g_videoTab.attr("height", param.height)
+                    }
+                    g_videoTab.attr("autoplay", true)
+                    if (!hush.webview.on) play()
+                } else if (g_type == "image" || g_type == "ext_image") { //for mobile only
+                    g_body = param.body
+                }
+                if (hush.webview.on) AndroidPopup.procAfterOpenPopup()
+                hush.webview.ready = true
+                $("#btn_save").on("click", function() { //called from mobile app
+                    if (g_type == "image") {
+                        hush.http.fileDownload("imagetofile", g_msgid)
+                    } else {
+                        const arr = g_added.added.split(hush.cons.deli)
+                        if (arr.length != 2) throw new Error("fileDownload Error : " + arr.length)
+                        hush.http.fileDownload(arr[0], arr[1])
+                    }
+                })
+                $("#main_pg").on("click", function() {
+                    toggleSaveVisible = toggleSaveVisible ? false : true
+                    AndroidPopup.toggleSaveVisible(toggleSaveVisible)
+                }) 
+            } catch (ex) {
+               hush.msg.alert(ex.message)
+            }
+        }).fail(function(ex) {
+            hush.msg.alert("Error occurred when loading page. " + ex.message)
+        })
+    </script>
+</body>
+</html>

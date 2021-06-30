@@ -1,0 +1,8 @@
+node_modules/
+package.json
+package-lock.json
+nodeconfig.js
+*.bat
+*.apk
+*.plist
+*.ipa

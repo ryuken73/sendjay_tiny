@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sendjay User</title>
+    <link id="favicon" href="/img/sendjay_darkblue.png" rel="shortcut icon" type="image/x-icon"/>
+    <link rel="stylesheet" href="/plugin/jquery-ui-smoothness-1.12.1.min.css">
+    <link rel="stylesheet" href="/common/jay_common.css?001">
+    <script src="/plugin/jquery-3.4.1.min.js"></script>
+    <script src="/plugin/jquery-ui-smoothness-1.12.1.min.js"></script>
+    <script src="/plugin/jquery.cookie.js"></script>
+    <style>
+        p { font-size:20px;margin:10px }        
+        td { border:0px solid darkgray;padding-left:3px;padding-top:5px }
+        input { width:90%;height:24px }
+        button { cursor:pointer;color:steelblue;font-weight:bold;font-size:20px;margin:10px }
+        .listTable { width:100%;border-collapse:collapse;border-spacing:0;table-layout:fixed;padding:0px;margin:10px }
+    </style>
+    <script>
+        let g_mode
+
+        function procOrgFromPopup(orgcd, orgnm) { //invoked from index.html (org) popup
+            $("#txt_orgcd").html(orgcd)
+            $("#txt_orgnm").html(orgnm)
+        }
+
+        $.when($.ready).done(async function() {
+            try {
+                await $.getScript("/common/jay_common.js")
+                const param = hush.http.getParamsFromLocation()
+                hush.http.removeCache(param.nocache)
+                g_mode = param.mode
+                if (g_mode == "new") {
+                    $("#txt_explain_new").show()
+                    $("#txt_explain_modify").hide()
+                    $("#btn_save").show()
+                    $("#btn_del").hide()
+                    setTimeout(() => { $("#in_userid").focus() }, 500)
+                } else { //modify
+                    let rs = await hush.auth.chkAutoLogin() //if not autologin, login required
+                    if (rs == null || rs.code != hush.cons.result_ok) rs = await hush.auth.login()
+                    hush.user = hush.auth.setUser()
+                    $("#txt_explain_new").hide()
+                    $("#txt_explain_modify").show()
+                    $("#btn_save").show()
+                    $("#btn_save").html("Save")
+                    $("#btn_del").show()
+                    $("#in_userid").attr("readonly", true)
+                    $("#in_userid").css("boder", "none")
+                    $("#in_userid").val(rs.userid)
+                    $("#in_usernm").val(rs.usernm)
+                    $("#txt_orgcd").html(rs.orgcd)
+                    $("#txt_orgnm").html(rs.orgnm)
+                    setTimeout(() => { $("#in_usernm").focus() }, 500)
+                }
+                $("#btn_org").on("click", async function() { 
+                    try {
+                        const _type = hush.util.isMobile() ? "org_web" : "org" //User visits to web site for registering on mobile web site. So, org_web is not a kind of mobile webview.
+                        g_memWin = hush.util.winopen("../jay/index?type=" + _type, 740, 650) 
+                    } catch (ex) {
+                        hush.msg.alert(ex.message)
+                    }
+                }) 
+                $("#btn_save").on("click", async function() { 
+                    try {
+                        const _userid = $("#in_userid").val().trim()
+                        const _pwd = $("#in_pwd").val().trim()
+                        const _pwd_1 = $("#in_pwd_1").val().trim()
+                        const _usernm = $("#in_usernm").val().trim()
+                        const _orgcd = $("#txt_orgcd").html()
+                        const _orgnm = $("#txt_orgnm").html()
+                        if (!hush.util.chkFieldVal(_userid, 20, 3, true, "UserId")) return
+                        if (!hush.util.chkFieldVal(_usernm, 50, 2, false, "UserName")) return
+                        if (!hush.util.chkFieldVal(_orgcd, 0, true, false, "Organization Code")) return
+                        let rq
+                        if (g_mode == "new" || (g_mode == "modify" && _pwd != "")) {
+                            if (_pwd != _pwd_1) {
+                                hush.msg.alert("Password different with the confirmed.")
+                                return
+                            }
+                            if (!hush.util.chkFieldVal(_pwd, 20, true, true, "Password")) return
+                            rq = { mode : g_mode, userid : _userid, pwd : _pwd, usernm : encodeURIComponent(_usernm), orgcd : _orgcd, orgnm : _orgnm }
+                        } else {
+                            rq = { mode : g_mode, userid : _userid, usernm : encodeURIComponent(_usernm), orgcd : _orgcd, orgnm : _orgnm }
+                        }
+                        const rs = await hush.http.ajax(hush.cons.route + "/proc_user", rq, "POST")
+                        if (rs.code != hush.cons.result_ok) {
+                            hush.msg.alert(rs.msg)
+                            return
+                        }
+                        if (g_mode == "new") {
+                            hush.msg.toast("registered")
+                        } else {
+                            if (opener) opener.location.reload()
+                            hush.msg.toast("done")
+                        } //setTimeout(() => { window.close() }, 1000)
+                    } catch (ex) {
+                        hush.msg.alert(ex.message)
+                    }
+                }) 
+                $("#btn_del").on("click", async function() { 
+                    try {
+                        const _userid = $("#in_userid").val().trim()
+                        const rq = { mode : "delete", userid : _userid }
+                        const rs = await hush.http.ajax(hush.cons.route + "/proc_user", rq, "POST")
+                        if (rs.code != hush.cons.result_ok) {
+                            hush.msg.alert(rs.msg)
+                            return
+                        }
+                        hush.msg.toast("User info deleted.")
+                        setTimeout(() => { window.close() }, 1000)
+                    } catch (ex) {
+                        hush.msg.alert(ex.message)
+                    }
+                })
+            } catch (ex) {
+                hush.msg.alert(ex.message)
+            }          
+        }).fail(function(ex) {
+            hush.msg.alert("Error occurred when loading page. " + ex.message)
+        })        
+    </script>
+</head>
+<body>
+    <p id=txt_explain_new style="display:none">Register user info for test.</p>
+    <p id=txt_explain_modify style="display:none">Modify your info.<br>Logout on Web Messenger if needed.</p>
+    <table class=listTable style="width:calc(100% - 22px);margin-top:30px">
+        <tr><td style="width:85px;font-weight:bold">Field</td><td style="width:40px;font-weight:bold">Max</td><td style="width:100%;font-weight:bold">Value</td></tr>
+        <tr><td>UserId</td><td>20</td><td><input id=in_userid name=in_userid style="color:maroon;font-weight:bold" /></td></tr>
+        <tr><td>Password</td><td>20</td><td><input id=in_pwd name=in_pwd type=password /></td></tr>
+        <tr><td>Password<br>(confirm)</td><td>20</td><td><input id=in_pwd_1 name=in_pwd_1 type=password /></td></tr>
+        <tr><td>UserName</td><td>50</td><td><input id=in_usernm name=in_usernm /></td></tr>
+        <tr><td>Organization</td><td></td><td>
+            <span id=btn_org style="line-height:30px;color:#005192;font-weight:bold;border:1px solid black;padding:3px;cursor:pointer">Choose</span>
+            <span id=txt_orgnm style="margin-left:10px"></span>
+            <span id=txt_orgcd style="display:none;margin-left:10px"></span>
+        </td></tr>
+    </table>
+    <button id=btn_save style="display:none">Register</button>
+    <button id=btn_del style="display:none">Delete</button>
+</body>
+</html>

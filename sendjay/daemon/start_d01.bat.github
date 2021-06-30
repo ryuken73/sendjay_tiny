@@ -1,0 +1,9 @@
+set NODE_CONFIG=c:/nodeops/sendjay_tiny/nodeconfig.js
+set MODULE_COMMON=c:/nodeops/sendjay_tiny/common/wscommon.js
+set MODULE_MYSQL=c:/nodeops/sendjay_tiny/common/wsmysql.js
+set MYSQL_DBINST=xxx
+set MYSQL_USER=xxx
+set MYSQL_SCHEMA=jayops
+set LOG_PATH=c:/nodeops/log/sendjay_tiny
+set UPLOAD_PATH=c:/nodeops/upload/sendjay_tiny
+node daemon01

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ERP Portal Demo</title>
+    <link id="favicon" href="/img/sendjay_darkblue.png" rel="shortcut icon" type="image/x-icon"/>
+    <link rel="stylesheet" href="/plugin/jquery-ui-smoothness-1.12.1.min.css">
+    <link rel="stylesheet" href="/common/jay_common.css?001">
+    <script src="/plugin/jquery-3.4.1.min.js"></script>
+    <script src="/plugin/jquery-ui-smoothness-1.12.1.min.js"></script>
+    <script src="/plugin/jquery.cookie.js"></script>
+    <script src="/plugin/socket.io.min.js"></script>
+    <style>
+        p { font-size:20px;margin:20px }        
+        button { cursor:pointer;color:steelblue;font-weight:bold;font-size:20px;margin:0px 0px 20px 20px }
+    </style>
+    <script>
+        $.when($.ready).done(async function() {
+            try {
+                await $.getScript("/common/jay_common.js")
+                await $.getScript("/common/jay_main.js")
+                const param = hush.http.getParamsFromLocation()
+                hush.http.removeCache(param.nocache) 
+                let rs = await hush.auth.chkAutoLogin() //See jay_common.js
+                if (rs == null || rs.code != hush.cons.result_ok) rs = await hush.auth.login() //See jay_common.js
+                const result = await initMain("auto") //launch=auto. 1.1) 2.1) See in jay_main.js
+                if (!result) return
+                $("#txt_userid").html(hush.user.id)
+                $("#btn_start").click(function() { 
+                    window.open(hush.cons.app + "?launch=manual&winid=" + hush.util.getCurDateTimeStr()) //3.1)
+                })
+                $("#btn_add").click(function() { 
+                    window.open("erp_portal")
+                })
+                $("#btn_logout").on("click", async function() {
+                    try {
+                        //Logout in which whether messenger embeded or not, should make live messenger terminate through html5 worker.
+                        //메신저가 임베디드되어 있지 않은 웹페이지(탭)에서 로그아웃시키면 임베디드된 페이지에서도 메신저가 종료되게 함 (html5 worker 이용)
+                        hush.auth.deleteCookieForUser()                       
+                        hush.msg.toast("Logout done.")
+                        setTimeout(() => { window.close() }, 500)
+                    } catch (ex) {
+                        hush.msg.alert("btn_logout: " + ex.message)
+                    }
+                })
+                $(window).bind("unload", function() { 
+                    procUnload() //See in jay_main.js
+                }) 
+            } catch (ex) {
+                hush.msg.alert("document.ready: " + ex.message)
+            }          
+        }).fail(function(ex) {
+            hush.msg.alert("document.ready.fail: " + ex.message)
+        })        
+    </script>
+</head>
+<body>
+    <p>For test, now you can regard this page as your company's portal. (Like ERP or Groupware..)</p>
+    <div style="border-top:1px solid darkgray;border-bottom:1px solid darkgray">
+        <p>Userid : <span id=txt_userid style="font-size:20px;font-weight:bold;color:blue"></span></p>
+        <p>Tab ID : <span id=txt_winid style="font-size:20px"></span> (winid) <span id=txt_state style="font-size:20px;font-weight:bold;color:orange"></span></p>
+        <p>Status : <span id=txt_msg style="font-size:20px"></span></p>
+        <button id=btn_start>Launch messenger</button>
+        <button id=btn_add>Add another portal page</button>
+        <button id=btn_logout>Logout</button>
+    </div>
+</body>
+</html>

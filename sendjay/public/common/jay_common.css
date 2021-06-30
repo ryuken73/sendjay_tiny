@@ -1,0 +1,43 @@
+/* main background : darkblue (#005192, 0/81/146), lightblue (#0085cd, 0/133/205) */
+/* button background : something blue (#0082AD) */
+/* emphasizing background : something orange (#FD760B), khaki (BDB76B) */
+
+* { font-family:arial;font-size:14px }
+html, body { height:100%;margin:0px }
+input[type="search"] { -webkit-appearance: textfield;box-sizing: content-box; } /* solution for search type not worked with height */
+input { height:28px;padding-left:5px;padding-right:5px }
+input::placeholder { font-size:13px;color:lightgray }
+input[type="checkbox"] { width:16px;height:16px;-webkit-appearance:none;-moz-appearance:none;-o-appearance:none;appearance:none;background-size:16px 16px;outline:1px solid darkgray }
+input[type="checkbox"]:checked { width:16px;height:16px;background:white url('/img/selecton_orange.png') no-repeat;background-size:16px 16px;background-position:50% 50%;outline:none }
+
+.coNav { flex-grow:1;display:flex;align-items:center;justify-content:center;background-color:white;border-right:1px solid #cccccc;font-weight:bold;text-shadow:none;cursor:pointer }
+.coNavSelected { background:#005192;color:white }
+
+.coImg12 { width:12px;height:12px;vertical-align:middle;cursor:pointer }
+.coImg16 { width:16px;height:16px;vertical-align:middle;cursor:pointer }
+.coImg24 { width:24px;height:24px;vertical-align:middle;cursor:pointer }
+.coImg32 { width:32px;height:32px;vertical-align:middle;cursor:pointer }
+
+.coImgMenu { width:24px;height:24px;vertical-align:middle;cursor:pointer;margin-right:5px } /* 0086cd(more blue) */
+.coImgBtn { display:flex;align-items:center;justify-content:center;width:32px;height:32px;background-color:#0082AD;border-radius:4px;cursor:pointer;margin-left:10px }
+.coMenuBtn { display:flex;align-items:center;height:32px;background-color:#0082AD;color:white;border-radius:4px;padding:0px 5px;cursor:pointer;margin-left:10px }
+.coSubMenuBtn { display:flex;align-items:center;height:32px;background-color:steelblue;color:white;border-radius:4px;padding:0px 5px;cursor:pointer;margin-left:10px }
+.coMenuFlat { color:#0082AD;cursor:pointer;margin-left:10px }
+
+.coSettingRow { display:flex;align-items:center;margin:20px 10px 0px 10px }
+.coSettingLabel { width:100px;color:dimgray }
+.coSettingWrap { width:200px;height:33px;display:flex;align-items:center;border:1px solid darkgray;border-radius:4px;cursor:pointer;padding-right:5px }
+.coSettingChkbox { width:16px;height:16px;background:lightgray;outline:none;margin-left:10px }
+.coSettingSpan { font-size:16px;margin-left:5px }
+
+.coDotDot { white-space:nowrap;text-overflow:ellipsis;overflow:hidden }
+.coNoDotDot { white-space:nowrap;overflow:hidden }
+
+.coStateOut { border-radius:3px;background-color:#FD760B;font-size:11px;color:white;padding:0px 2px }
+.coStateOn { border-radius:3px;background-color:#0085CD;font-size:11px;color:white;padding:0px 2px }
+.coStateOff { border-radius:3px;background-color:#BDB76B;font-size:11px;color:white;padding:0px 2px }
+.coStateMob { border-radius:3px;background-color:darkgreen;font-size:11px;color:white;padding:0px 2px }
+
+.coLangToggle { font-size:14px;color:#005192;font-weight:bold;cursor:pointer }
+
+.coOverlay { position:fixed;display:block;width:100%;height:100%;top:0;left:0;right:0;bottom:0;background-color: rgba(220,220,220,0.0);z-index:99999 }
