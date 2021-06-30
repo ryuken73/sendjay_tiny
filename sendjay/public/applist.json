@@ -1,9 +1,9 @@
 { 
-    "sendjay_and" : { "version" : "1.2", "filename" : "sendjay.apk", "path" : "/app/" },
-    "sendjay_ios" : { "version" : "1.0", "filename" : "sendjay.plist", "path" : "/app/" },
-    "webview_main_version" : "1.2", 
-    "webview_chat_version" : "1.2",
-    "webview_popup_version" : "1.2",
+    "sendjay_and" : { "version" : "1.0", "filename" : "sendjay.apk", "path" : "/content/" },
+    "sendjay_ios" : { "version" : "1.0", "filename" : "sendjay.plist", "path" : "/content/" },
+    "webview_main_version" : "1.0", 
+    "webview_chat_version" : "1.0",
+    "webview_popup_version" : "1.0",
     "etc" : { "screenoff" : 10000, "screenon" : 3000 },
     "code" : "0",
     "msg" : ""
